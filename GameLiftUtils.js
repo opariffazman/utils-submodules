@@ -1,5 +1,5 @@
 const { GameLiftClient, CreatePlayerSessionCommand, CreateGameSessionCommand, CreateGameSessionQueueCommand, DescribeGameSessionsCommand } = require('@aws-sdk/client-gamelift')
-const APIUtils = require('../Modules/APIUtils')
+const APIUtils = require('./APIUtils')
 
 ;('use strict')
 // @ts-check

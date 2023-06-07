@@ -1,5 +1,5 @@
 const { PlayFabAdmin, PlayFabServer, PlayFabAuthentication } = require('playfab-sdk')
-const APIUtils = require('../Modules/APIUtils')
+const APIUtils = require('./APIUtils')
 
 ;('use strict')
 // @ts-check
