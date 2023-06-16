@@ -1,5 +1,13 @@
-const { GameLiftClient, CreatePlayerSessionCommand, CreateGameSessionCommand, CreateGameSessionQueueCommand, DescribeGameSessionsCommand } = require('@aws-sdk/client-gamelift')
+const {
+  GameLiftClient,
+  CreatePlayerSessionCommand,
+  CreateGameSessionCommand,
+  CreateGameSessionQueueCommand,
+  DescribeGameSessionsCommand,
+  UpdateRuntimeConfigurationCommand
+} = require('@aws-sdk/client-gamelift')
 const APIUtils = require('./APIUtils')
+const { v4: uuidv4 } = require('uuid')
 
 ;('use strict')
 // @ts-check
@@ -8,6 +16,45 @@ const APIUtils = require('./APIUtils')
  * GameLiftUtils Module
  * @module GameLiftUtils
  */
+
+/**
+ * Reserves an open player slot in a game session for a player.
+ * @function
+ * @name updateRuntimeConfiguration
+ * @memberof module:GameLiftUtils
+ * @param {GameLiftClientOptions} client - GameLift client with specified region & credentials
+ * @param {string} fleetId - Id of GameLift Fleet
+ * @param {string} idempotencyToken - Token generated that is would replace gameSessionId
+ * @returns {RuntimeConfiguration} A RuntimeConfiguration object is returned.
+ */
+const updateRuntimeConfiguration = (client, fleetId, idempotencyToken) => {
+  return new Promise((resolve, reject) => {
+    const request = {
+      FleetId: fleetId,
+      RuntimeConfiguration: {
+        ServerProcesses: [
+          {
+            LaunchPath: '/local/game/ProjectMetaclash/Binaries/Linux/ProjectMetaclashServer',
+            Parameters: `service=gamelift -NOSTEAM -core -log LOG=${idempotencyToken}.log`,
+            ConcurrentExecutions: 6 // required
+          }
+        ]
+      }
+    }
+
+    const command = new UpdateRuntimeConfigurationCommand(request)
+
+    client
+      .send(command)
+      .then((response) => {
+        const result = response['RuntimeConfiguration']
+        APIUtils.handleApiResponse('updateRuntimeConfiguration', 'GameLift', resolve, reject, null, result)
+      })
+      .catch((error) => {
+        APIUtils.handleApiResponse('updateRuntimeConfiguration', 'GameLift', resolve, reject, error, null)
+      })
+  })
+}
 
 /**
  * @typedef {Object} AWSCredentials
@@ -77,17 +124,20 @@ const createPlayerSession = (client, playerId, gameSessionId) => {
  * @memberof module:GameLiftUtils
  * @param {GameLiftClientOptions} client - GameLift client with specified region & credentials
  * @param {string} aliasId - GameLift alias id
- * @param {number} maximumPlayerSessionCount - Full gamelift session Id including region & fleet info eg: arn*
+ * @param {number} maximumPlayerSessionCount - Maximum player count up to 200+ supported
  * @param {GameProperty} gameProperties - Custom game properties including information of map level, game modes etc
  * @returns {GameSession} A GameSession object is returned containing the game session configuration and status.
  */
 const createGameSession = (client, aliasId, maximumPlayerSessionCount, gameProperties) => {
   return new Promise((resolve, reject) => {
+    // const idempotencyToken = `Metaclash-${uuidv4().replace(/-/g, '').slice(0, 48)}`
     const request = {
       AliasId: aliasId,
       MaximumPlayerSessionCount: maximumPlayerSessionCount,
       GameProperties: gameProperties
     }
+
+    // updateRuntimeConfiguration(client, 'fleet-34ee7044-0eff-4b4d-8e11-9ce07a8746a6', idempotencyToken)
 
     const command = new CreateGameSessionCommand(request)
 
@@ -203,5 +253,6 @@ module.exports = {
   createGameSession,
   createGameSessionQueue,
   describeGameSession,
-  describeGameSessions
+  describeGameSessions,
+  updateRuntimeConfiguration
 }
