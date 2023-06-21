@@ -25,18 +25,20 @@ const { v4: uuidv4 } = require('uuid')
  * @param {GameLiftClientOptions} client - GameLift client with specified region & credentials
  * @param {string} fleetId - Id of GameLift Fleet
  * @param {string} idempotencyToken - Token generated that is would replace gameSessionId
+ * @param {string} launchPath - The path to the game executable
+ * @param {number} concurrentExecutions - Amount of game executable can be executed simultaneously
  * @returns {RuntimeConfiguration} A RuntimeConfiguration object is returned.
  */
-const updateRuntimeConfiguration = (client, fleetId, idempotencyToken) => {
+const updateRuntimeConfiguration = (client, fleetId, idempotencyToken, launchPath, concurrentExecutions) => {
   return new Promise((resolve, reject) => {
     const request = {
       FleetId: fleetId,
       RuntimeConfiguration: {
         ServerProcesses: [
           {
-            LaunchPath: '/local/game/ProjectMetaclash/Binaries/Linux/ProjectMetaclashServer',
+            LaunchPath: `/local/game/${launchPath}`,
             Parameters: `service=gamelift -NOSTEAM -core -log LOG=${idempotencyToken}.log`,
-            ConcurrentExecutions: 6 // required
+            ConcurrentExecutions: concurrentExecutions // required
           }
         ]
       }
@@ -130,14 +132,12 @@ const createPlayerSession = (client, playerId, gameSessionId) => {
  */
 const createGameSession = (client, aliasId, maximumPlayerSessionCount, gameProperties) => {
   return new Promise((resolve, reject) => {
-    // const idempotencyToken = `Metaclash-${uuidv4().replace(/-/g, '').slice(0, 48)}`
+    // const idempotencyToken = `${uuidv4().replace(/-/g, '').slice(0, 48)}`
     const request = {
       AliasId: aliasId,
       MaximumPlayerSessionCount: maximumPlayerSessionCount,
       GameProperties: gameProperties
     }
-
-    // updateRuntimeConfiguration(client, 'fleet-34ee7044-0eff-4b4d-8e11-9ce07a8746a6', idempotencyToken)
 
     const command = new CreateGameSessionCommand(request)
 
